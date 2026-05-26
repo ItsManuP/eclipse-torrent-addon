@@ -5,5 +5,5 @@
     "description": "OP",
     "resources": ["search", "stream"],
     "types": ["track"],
-    "url": "https://<IL-TUO-APP>.vercel.app"
+    "url": "https://eclipseaddonto.vercel.app/"
 }
