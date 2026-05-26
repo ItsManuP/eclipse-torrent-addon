@@ -28,7 +28,7 @@ async def search_apibay(query: str):
     return results
 
 async def add_torrent_to_torbox(magnet: str, api_token: str):
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=40.0) as client:  # Aumentato a 40 secondi
         headers = {"Authorization": f"Bearer {api_token}"}
         resp = await client.post(
             f"{TORBOX_API_URL}/torrents/createtorrent",
