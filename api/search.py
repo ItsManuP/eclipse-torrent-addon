@@ -125,3 +125,54 @@ async def serve_manifest():
         "types": ["track"],
         "url": "https://eclipsemusicaddonto.vercel.app"
     }
+
+
+# --- Dizionario per memorizzare lo stato dei torrent in download (semplice cache) ---
+# Attenzione: questa è una soluzione semplice ma volatile. Per un uso più serio, considera Redis.
+download_status = {}
+
+async def wait_for_download(torrent_id: str, api_token: str):
+    """Attende che TorBox completi il download di un torrent, quindi restituisce l'URL di streaming."""
+    start_time = asyncio.get_event_loop().time()
+    while (asyncio.get_event_loop().time() - start_time) < 300:  # Timeout di 5 minuti
+        result = await get_torrent_status(torrent_id, api_token)
+        if result["status"] == "completed":
+            return result["stream_url"]
+        elif result["status"] == "error":
+            return None
+        await asyncio.sleep(3)
+    return None
+
+@app.get("/stream/{track_id}")
+async def stream_endpoint(track_id: str):
+    """
+    Endpoint per lo streaming. 
+    track_id è l'ID del torrent restituito da /search.
+    """
+    api_token = os.environ.get("TORBOX_API_KEY")
+    if not api_token:
+        raise HTTPException(500, "TORBOX_API_KEY not configured")
+
+    # Se il download è già in corso, recupera lo stato dalla cache
+    if track_id in download_status:
+        stream_url = download_status[track_id]
+        if stream_url:
+            return {"stream_url": stream_url}
+        else:
+            # Se è ancora in download, aspetta
+            stream_url = await wait_for_download(track_id, api_token)
+            if stream_url:
+                download_status[track_id] = stream_url
+                return {"stream_url": stream_url}
+            else:
+                raise HTTPException(404, "Stream not available")
+    else:
+        # Prima chiamata: avvia l'attesa
+        download_status[track_id] = None
+        stream_url = await wait_for_download(track_id, api_token)
+        if stream_url:
+            download_status[track_id] = stream_url
+            return {"stream_url": stream_url}
+        else:
+            download_status.pop(track_id, None)
+            raise HTTPException(404, "Stream not available")
