@@ -1,0 +1,9 @@
+{
+    "id": "com.tuoindirizzo.torrentplayer",
+    "name": "Torrent Player",
+    "version": "1.0.0",
+    "description": "OP",
+    "resources": ["search", "stream"],
+    "types": ["track"],
+    "url": "https://<IL-TUO-APP>.vercel.app"
+}
