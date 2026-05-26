@@ -82,8 +82,8 @@ async def get_torrent_status(auth_id: str, api_token: str):
             headers=headers
         )
         if info_resp.status_code != 200:
-            print(f"Errore controltorrent: {info_resp.status_code} - {info_resp.text}")
-            return {"status": "error", "detail": f"HTTP {info_resp.status_code}: {info_resp.text}"}
+            print(f"ERRORE: {info_resp.status_code} - {info_resp.text}")
+            return {"status": "error", "detail": info_resp.text}
         info = info_resp.json()
         if not info.get("success"):
             return {"status": "error", "detail": info.get("error")}
