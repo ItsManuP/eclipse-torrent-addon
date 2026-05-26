@@ -27,26 +27,30 @@ async def search_apibay(query: str):
     results.sort(key=lambda x: x["seeders"], reverse=True)
     return results
 
-async def add_torrent_to_torbox(magnet: str, api_token: str):
-    async with httpx.AsyncClient(timeout=40.0) as client:  # Aumentato a 40 secondi
-        headers = {"Authorization": f"Bearer {api_token}"}
-        resp = await client.post(
-            f"{TORBOX_API_URL}/torrents/createtorrent",
-            data={"magnet": magnet},
-            headers=headers
-        )
-        if resp.status_code != 200:
-            raise Exception(f"HTTP {resp.status_code}: {resp.text}")
-        result = resp.json()
-        if not result.get("success"):
-            raise Exception(f"TorBox API error: {result.get('error')} - {result.get('detail')}")
-        data = result.get("data")
-        if not data:
-            raise Exception(f"Risposta senza 'data': {result}")
-        torrent_id = data.get("torrent_id")
-        if not torrent_id:
-            raise Exception(f"Campo 'torrent_id' non trovato in data: {data}")
-        return str(torrent_id)
+
+async def add_torrent_to_torbox(magnet: str, api_token: str, max_retries=3):
+    for attempt in range(1, max_retries+1):
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"{TORBOX_API_URL}/torrents/createtorrent",
+                    data={"magnet": magnet},
+                    headers={"Authorization": f"Bearer {api_token}"}
+                )
+                result = resp.json()
+                if resp.status_code == 200 and result.get("success"):
+                    return str(result["data"]["torrent_id"])
+                if result.get("error") == "DOWNLOAD_SERVER_ERROR":
+                    print(f"DOWNLOAD_SERVER_ERROR, tentativo {attempt} fallito")
+                    await asyncio.sleep(2 ** attempt)  # backoff esponenziale
+                    continue
+                raise Exception(f"TorBox error: {result.get('error')}")
+        except httpx.TimeoutException:
+            print(f"Timeout tentativo {attempt}")
+            await asyncio.sleep(2 ** attempt)
+            continue
+    raise Exception("Impossibile aggiungere il torrent dopo vari tentativi")
+
 
 async def get_torrent_status(torrent_id: str, api_token: str):
     async with httpx.AsyncClient(timeout=10.0) as client:
