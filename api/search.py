@@ -6,6 +6,12 @@ from utils.realdebrid import get_streamable_link
 app = FastAPI()
 
 @app.get("/search")
+
+@app.get("/")
+async def root():
+    return {"message": "Eclipse Torrent Addon is running. Use /search?q=..."}
+
+
 async def search_torrents_endpoint(q: str, authorization: Optional[str] = Header(None)):
     """
     Endpoint per cercare torrent e ottenere un link di streaming.
