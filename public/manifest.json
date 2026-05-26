@@ -3,7 +3,7 @@
     "name": "Torrent Player",
     "version": "1.0.0",
     "description": "",
-    "resources": ["search"],
+    "resources": ["search", "stream"],
     "types": ["track"],
     "url": "https://eclipseaddonto.vercel.app"
 }
