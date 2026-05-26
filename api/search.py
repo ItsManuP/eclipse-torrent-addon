@@ -86,25 +86,28 @@ async def wait_for_stream(torrent_id: str, api_token: str, timeout_seconds: int 
 
 @app.get("/search")
 async def search_endpoint(q: str):
-    api_token = os.environ.get("TORBOX_API_KEY")
-    if not api_token:
-        raise HTTPException(500, "TORBOX_API_KEY not configured")
-    if not q:
-        raise HTTPException(400, "Missing 'q' parameter")
-    torrents = await search_apibay(q)
-    if not torrents:
-        raise HTTPException(404, "No torrents found")
-    best = torrents[0]
+    import traceback
     try:
+        api_token = os.environ.get("TORBOX_API_KEY")
+        if not api_token:
+            raise HTTPException(500, "TORBOX_API_KEY not configured")
+
+        torrents = await search_apibay(q)
+        if not torrents:
+            raise HTTPException(404, "No torrents found")
+        best = torrents[0]
+
         torrent_id = await add_torrent_to_torbox(best["magnet"], api_token)
+        return {
+            "torrent_id": torrent_id,
+            "title": best["name"],
+            "status": "downloading",
+        }
     except Exception as e:
-        raise HTTPException(500, f"TorBox error: {str(e)}")
-    return {
-        "torrent_id": torrent_id,
-        "title": best["name"],
-        "status": "downloading",
-        "info_hash": best["info_hash"]
-    }
+        print(f"ERRORE in /search: {repr(e)}")
+        print(traceback.format_exc())
+        # Restituisce il messaggio di errore nel body della risposta
+        raise HTTPException(500, detail=str(e))
 
 @app.get("/status")
 async def status_endpoint(torrent_id: str):
